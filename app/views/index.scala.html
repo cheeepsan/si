@@ -1,0 +1,39 @@
+@(webSocketUrl: String)(implicit r: Request[_])
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reactive Stock News Dashboard</title>
+    <link rel='stylesheet' href='@routes.Assets.at("lib/bootstrap/css/bootstrap.min.css")'>
+    <link rel="stylesheet" media="screen" href='@routes.Assets.at("stylesheets/main.css")'>
+    <link rel="shortcut icon" type="image/png" href='@routes.Assets.at("images/favicon.png")'>
+    <script
+            src="https://code.jquery.com/jquery-3.4.0.js"
+            integrity="sha256-DYZMCC8HTC+QDr5QNaIcfR7VSPtcISykd+6eSmBW5qo="
+            crossorigin="anonymous"></script>
+    <script type='text/javascript' charset='utf-8' src='@routes.Assets.at("javascripts/main.js")'></script>
+</head>
+<body data-ws-url='@webSocketUrl'>
+
+<div class="wrap">
+    <div class="container-fluid">
+        <div>
+            <h1 class="">Chat Room</h1>
+        </div>
+        <input id="clickMe" type="button" value="Connect" onclick="start('@webSocketUrl');"/>
+        <div class="row">
+            <div class="col-lg-12">
+                <ul id="messages" class="list-unstyled">
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="wrap">
+    <div class="container-fluid">
+        <h1>Data</h1>
+        <input id="loadData" type="button" value="Load data" onclick="renderData('@webSocketUrl');"/>
+    </div>
+</div>
+</body>
+
+</html>
