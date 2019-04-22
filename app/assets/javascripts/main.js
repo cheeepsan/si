@@ -17,6 +17,7 @@ function start(d) {
     };
 
     socket.onmessage = function(event) {
+       console.log("t: " + event);
       console.log("Получены данные " + event.data);
     };
 
@@ -26,6 +27,10 @@ function start(d) {
 }
 
 function renderData(data) {
-    socket.send("load")
+    var k = jQuery.parseJSON( '{ "name": "John" }' );
+
+    console.log("daata: " + k)
+    socket.send(k);
 }
+
 

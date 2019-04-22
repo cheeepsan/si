@@ -10,8 +10,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, Source}
 import akka.util.Timeout
 import javax.inject.Inject
-import models.actors.{MyWebSocketActor, UserParentActor}
-import play.api.Logger
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.streams.ActorFlow
 import play.api.mvc._
@@ -19,14 +17,13 @@ import services.{SiqParser, Util}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-
 import javax.inject._
-
 import akka.NotUsed
 import akka.actor._
 import akka.pattern.ask
 import akka.stream.scaladsl._
 import akka.util.Timeout
+import models.actors.MyWebSocketActor
 import play.api.Logger
 import play.api.libs.json._
 import play.api.mvc._
@@ -36,11 +33,10 @@ import scala.concurrent.{ExecutionContext, Future}
 class ClientController @Inject()(cc: ControllerComponents)(
   implicit system: ActorSystem,
   mat: Materializer,
-  implicit val executionContext: ExecutionContext,
-  @Named("userParentActor") userParentActor: ActorRef)
+  implicit val executionContext: ExecutionContext)
   extends AbstractController(cc) {
 
-  private val logger = Logger(getClass)
+  private val logger = Logger
 
 
   def index() = Action { implicit request: Request[AnyContent] =>
@@ -67,36 +63,36 @@ class ClientController @Inject()(cc: ControllerComponents)(
     *
     * @return a fully realized websocket.
     */
-  def ws: WebSocket = WebSocket.acceptOrResult[JsValue, JsValue] {
+  def ws: WebSocket = WebSocket.acceptOrResult[String, String] {
     case rh if sameOriginCheck(rh) =>
-      wsFutureFlow(rh).map { flow =>
-        Right(flow)
-      }.recover {
-        case e: Exception =>
-          logger.error("Cannot create websocket", e)
-          val jsError = Json.obj("error" -> "Cannot create websocket")
-          val result = InternalServerError(jsError)
-          Left(result)
+      val k = ActorFlow.actorRef { out =>
+        MyWebSocketActor.props(out)
       }
-
+      logger.info("actorFlow " + k)
+      Future.successful(Right(k))
     case rejected =>
       logger.error(s"Request ${rejected} failed same origin check")
       Future.successful {
         Left(Forbidden("forbidden"))
       }
+//    case rh if sameOriginCheck(rh) =>
+//      val k = wsFutureFlow(rh).map { flow =>
+//        Right(flow)
+//      }.recover {
+//        case e: Exception =>
+//          logger.error("Cannot create websocket", e)
+//          val jsError = Json.obj("error" -> "Cannot create websocket")
+//          val result = InternalServerError(jsError)
+//          Left(result)
+//      }
+//      logger.info("Creating socket " + k)
+//      k
+//    case rejected =>
+//      logger.error(s"Request ${rejected} failed same origin check")
+//      Future.successful {
+//        Left(Forbidden("forbidden"))
+//      }
   }
-
-  /**
-    * Creates a Future containing a Flow of JsValue in and out.
-    */
-  private def wsFutureFlow(request: RequestHeader): Future[Flow[JsValue, JsValue, NotUsed]] = {
-    // Use guice assisted injection to instantiate and configure the child actor.
-    implicit val timeout = Timeout(1.second) // the first run in dev can take a while :-(
-    val future: Future[Any] = userParentActor ? UserParentActor.Create(request.id.toString)
-    val futureFlow: Future[Flow[JsValue, JsValue, NotUsed]] = future.mapTo[Flow[JsValue, JsValue, NotUsed]]
-    futureFlow
-  }
-
 
   /**
     * Checks that the WebSocket comes from the same origin.  This is necessary to protect
@@ -108,11 +104,11 @@ class ClientController @Inject()(cc: ControllerComponents)(
   private def sameOriginCheck(implicit rh: RequestHeader): Boolean = {
     // The Origin header is the domain the request originates from.
     // https://tools.ietf.org/html/rfc6454#section-7
-    logger.debug("Checking the ORIGIN ")
+    logger.info("Checking the ORIGIN ")
 
     rh.headers.get("Origin") match {
       case Some(originValue) if originMatches(originValue) =>
-        logger.debug(s"originCheck: originValue = $originValue")
+        logger.info(s"originCheck: originValue = $originValue")
         true
 
       case Some(badOrigin) =>

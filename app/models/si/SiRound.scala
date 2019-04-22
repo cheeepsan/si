@@ -4,7 +4,7 @@ package models.si
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-case class SiTheme(name: String) {
+case class SiTheme(name: String) extends SiObject {
 
 
 }
@@ -13,7 +13,7 @@ object SiTheme {
   def apply(name: String): SiTheme = new SiTheme(name)
   implicit val siThemeFormat: OFormat[SiTheme] = Json.format[SiTheme]
 }
-case class SiRound(name: String, themes: Map[String, List[SiQuestion]] = Map.empty) {
+case class SiRound(name: String, themes: Map[String, List[SiQuestion]] = Map.empty) extends SiObject {
 
 }
 

@@ -28,7 +28,7 @@ case class SiQuestion(price: Int,
                       theme: String,
                       answer: List[String],
                       qType: SiQuestionType.Value,
-                      scenario: SiScenario.Value) {
+                      scenario: SiScenario.Value) extends SiObject {
 
 
 }
