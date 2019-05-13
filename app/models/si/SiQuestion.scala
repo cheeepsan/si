@@ -35,6 +35,11 @@ case class SiQuestion(price: Int,
 
 object SiQuestion {
 
+  implicit val listSiQuestionWrites: Writes[List[SiQuestion]] = Writes[List[SiQuestion]] {
+    list =>
+      Json.toJson(list.map (SiObject.siObjectWrites.writes(_)))
+  }
+
   implicit val siQuestionReads: Reads[SiQuestion] = (
     (JsPath \ "price").read[Int] and
       (JsPath \ "text").read[String] and
@@ -52,6 +57,7 @@ object SiQuestion {
       (JsPath \ "qType").write[SiQuestionType.Value] and
       (JsPath \ "scenario").write[SiScenario.Value]
     )(unlift(SiQuestion.unapply))
+
 
   def getQuestionType(typeName: String): SiQuestionType.Value = typeName match {
     case "cat" => SiQuestionType.SI_CAT

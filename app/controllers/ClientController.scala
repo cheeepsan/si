@@ -2,34 +2,18 @@ package controllers
 
 import java.io.File
 import java.net.URI
-
-import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
-import akka.parboiled2.RuleTrace.Named
 import akka.stream.Materializer
-import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, Source}
-import akka.util.Timeout
 import javax.inject.Inject
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.streams.ActorFlow
-import play.api.mvc._
 import services.{SiqParser, Util}
-
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
-import javax.inject._
-import akka.NotUsed
-import akka.actor._
-import akka.pattern.ask
-import akka.stream.scaladsl._
-import akka.util.Timeout
 import models.actors.MyWebSocketActor
+import models.si.{SiMessage, SiUser}
 import play.api.Logger
-import play.api.libs.json._
 import play.api.mvc._
-
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+
 class ClientController @Inject()(cc: ControllerComponents)(
   implicit system: ActorSystem,
   mat: Materializer,
@@ -50,7 +34,8 @@ class ClientController @Inject()(cc: ControllerComponents)(
     val destDir = new File("F:\\workspace\\si\\siClient\\pack")
 
     val s = parser.process(destDir)
-    Ok(Json.toJson(s))
+    val m = new SiMessage("message", new SiUser(1, "Vasserman"), "hz", s)
+    Ok(Json.toJson(m))
   }
 
   /**
@@ -75,23 +60,6 @@ class ClientController @Inject()(cc: ControllerComponents)(
       Future.successful {
         Left(Forbidden("forbidden"))
       }
-//    case rh if sameOriginCheck(rh) =>
-//      val k = wsFutureFlow(rh).map { flow =>
-//        Right(flow)
-//      }.recover {
-//        case e: Exception =>
-//          logger.error("Cannot create websocket", e)
-//          val jsError = Json.obj("error" -> "Cannot create websocket")
-//          val result = InternalServerError(jsError)
-//          Left(result)
-//      }
-//      logger.info("Creating socket " + k)
-//      k
-//    case rejected =>
-//      logger.error(s"Request ${rejected} failed same origin check")
-//      Future.successful {
-//        Left(Forbidden("forbidden"))
-//      }
   }
 
   /**
