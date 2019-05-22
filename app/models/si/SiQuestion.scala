@@ -6,57 +6,40 @@ import play.api.libs.functional.syntax._
 
 
 import scala.xml.Node
-
-object SiQuestionType extends Enumeration {
-  type SiQuestionType = Value
-  val SI_QUESTION, SI_CAT, SI_AUCTION = Value
-  implicit val siScenarioReads: Reads[SiQuestionType.Value] = Reads.enumNameReads(SiQuestionType)
-  implicit val siScenarioWrites: Writes[SiQuestionType.Value] = Writes.enumNameWrites
-//  implicit val siQuestionTypeFormat: Format[SiQuestionType.Value] = EnumUtils.enumFormat(SiQuestionType)
-//  implicit val siQuestionTypeWrites: Writes[SiQuestionType.Value] = Writes.enumNameWrites
-}
-
-object SiScenario extends Enumeration {
-  val SI_TEXT, SI_IMAGE, SI_AUDIO, SI_VIDEO = Value
-
-  implicit val siScenarioReads: Reads[SiScenario.Value] = Reads.enumNameReads(SiScenario)
-  implicit val siScenarioWrites: Writes[SiScenario.Value] = Writes.enumNameWrites
-}
-
-case class SiQuestion(price: Int,
+case class SiQuestion(code: String,
+                      price: Int,
                       text: String,
                       theme: String,
                       answer: List[String],
                       qType: SiQuestionType.Value,
-                      scenario: SiScenario.Value) extends SiObject {
-
-
-}
+                      scenario: SiScenario.Value) extends SiObject {}
 
 object SiQuestion {
 
   implicit val listSiQuestionWrites: Writes[List[SiQuestion]] = Writes[List[SiQuestion]] {
     list =>
-      Json.toJson(list.map (SiObject.siObjectWrites.writes(_)))
+      Json.toJson(list.map(SiObject.siObjectWrites.writes(_)))
   }
 
   implicit val siQuestionReads: Reads[SiQuestion] = (
-    (JsPath \ "price").read[Int] and
+    (JsPath \ "code").read[String] and
+      (JsPath \ "price").read[Int] and
       (JsPath \ "text").read[String] and
       (JsPath \ "theme").read[String] and
       (JsPath \ "answer").read[List[String]] and
       (JsPath \ "qType").read[SiQuestionType.Value] and
       (JsPath \ "scenario").read[SiScenario.Value]
-    )(SiQuestion.apply _)
+    ) (SiQuestion.apply _)
 
   implicit val siQuestionWrites: Writes[SiQuestion] = (
-    (JsPath \ "price").write[Int] and
+    (JsPath \ "code").write[String] and
+      (JsPath \ "price").write[Int] and
       (JsPath \ "text").write[String] and
       (JsPath \ "theme").write[String] and
       (JsPath \ "answer").write[List[String]] and
       (JsPath \ "qType").write[SiQuestionType.Value] and
       (JsPath \ "scenario").write[SiScenario.Value]
-    )(unlift(SiQuestion.unapply))
+    ) (unlift(SiQuestion.unapply))
 
 
   def getQuestionType(typeName: String): SiQuestionType.Value = typeName match {
@@ -73,27 +56,29 @@ object SiQuestion {
     case _ => SiScenario.SI_TEXT
   }
 
-  def apply(price: Int,
+  def apply(code: String,
+            price: Int,
             text: String,
             theme: String,
             answer: List[String],
             qType: SiQuestionType.Value,
-            scenario: SiScenario.Value): SiQuestion = new SiQuestion(price, text, theme, answer, qType, scenario)
+            scenario: SiScenario.Value): SiQuestion = new SiQuestion(code, price, text, theme, answer, qType, scenario)
 
-  def constructQuestion(price: Int,
-            text: String,
-            answer: List[String],
-            qType: SiQuestionType.Value,
-            scenarioType: SiScenario.Value,
-            theme: String,
-            typeNode: Option[Node]): SiQuestion = {
+  def constructQuestion(code: String,
+                        price: Int,
+                        text: String,
+                        answer: List[String],
+                        qType: SiQuestionType.Value,
+                        scenarioType: SiScenario.Value,
+                        theme: String,
+                        typeNode: Option[Node]): SiQuestion = {
 
     val themeAndPrice = typeNode match {
       case Some(n) => this.xmlFindPrice(qType, price, theme, n)
       case None => (theme, price)
     }
 
-    apply(themeAndPrice._2, text, themeAndPrice._1, answer, qType, scenarioType)
+    apply(code, themeAndPrice._2, text, themeAndPrice._1, answer, qType, scenarioType)
   }
 
   def xmlFindPrice(qType: SiQuestionType.Value, price: Int, theme: String, node: Node): (String, Int) = qType match {

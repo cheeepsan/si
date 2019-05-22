@@ -1,0 +1,12 @@
+@import models.si.SiQuestion
+@(roundThemes: Map[String, List[SiQuestion]])
+
+
+<table>
+    @for((theme: String, qList: List[SiQuestion]) <- roundThemes) {
+        <tr>
+            @roundThemeRow(theme, qList)
+        </tr>
+    }
+
+</table>

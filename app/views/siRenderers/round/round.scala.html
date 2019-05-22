@@ -1,0 +1,9 @@
+@import models.si.SiRound
+@(round: SiRound)
+
+<h2 id="roundTitle">@round.name</h2>
+
+
+    @if(round.themes.nonEmpty) {
+        @roundTable(round.themes)
+    }

@@ -11,28 +11,33 @@
             integrity="sha256-DYZMCC8HTC+QDr5QNaIcfR7VSPtcISykd+6eSmBW5qo="
             crossorigin="anonymous"></script>
     <script type='text/javascript' charset='utf-8' src='@routes.Assets.at("javascripts/main.js")'></script>
+    <script type='text/javascript' charset='utf-8' src='@routes.Assets.at("javascripts/models.js")'></script>
 </head>
-<body data-ws-url='@webSocketUrl'>
+<body data-ws-url='@webSocketUrl' class="text-center">
+<div class="cover-container d-flex h-100 p-3 mx-auto flex-column">
+    <header class="masthead mb-auto">
+        <div class="inner">
+            <h3 id="status" class="masthead-brand">Status</h3>
+            <nav class="nav nav-masthead justify-content-center">
+                <a class="nav-link" href="#" id="clickMe"  onclick="start('@webSocketUrl');">Connect</a>
+                <a class="nav-link" href="#" id="loadData" onclick="renderData('@webSocketUrl');">Load data</a>
+            </nav>
+        </div>
+    </header>
 
-<div class="wrap">
-    <div class="container-fluid">
-        <div>
-            <h1 class="">Chat Room</h1>
+    <main role="main" class="inner cover">
+        <h1 class="cover-heading">SiGame</h1>
+        <div id="board" class="board">
+
+
         </div>
-        <input id="clickMe" type="button" value="Connect" onclick="start('@webSocketUrl');"/>
-        <div class="row">
-            <div class="col-lg-12">
-                <ul id="messages" class="list-unstyled">
-                </ul>
-            </div>
+    </main>
+
+    <footer class="mastfoot mt-auto">
+        <div class="inner">
+            <p></p>
         </div>
-    </div>
-</div>
-<div class="wrap">
-    <div class="container-fluid">
-        <h1>Data</h1>
-        <input id="loadData" type="button" value="Load data" onclick="renderData('@webSocketUrl');"/>
-    </div>
+    </footer>
 </div>
 </body>
 

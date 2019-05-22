@@ -7,6 +7,9 @@ import models.si._
 import scala.xml.{Elem, Node, NodeSeq, XML}
 
 class SiqParser {
+  val random = new scala.util.Random()
+  val alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  val size = alpha.size
 
   val contentXMLName = "content.xml"
 
@@ -33,7 +36,7 @@ class SiqParser {
         val roundName = roundNode \@ "name"
         val questions: Map[String, List[SiQuestion]] = (roundNode \\ "theme").flatMap {
           themeNode =>
-            val theme: String = this.createTheme(themeNode)
+            val theme: String = this.createTheme(themeNode).trim
             val questionList = this.createQuestionList(themeNode \\ "question", theme)
 
             Map(theme -> questionList)
@@ -48,14 +51,15 @@ class SiqParser {
     themeName
   }
 
-  def createQuestionList(questionNode: NodeSeq, theme: String): List[SiQuestion] = {
-    questionNode.map {
-      questionNode =>
-        this.createQuestion(questionNode, theme)
+  def createQuestionList(questionNodeList: NodeSeq, theme: String): List[SiQuestion] = {
+    questionNodeList.zipWithIndex.map {
+      case (questionNode, index)=>
+        this.createQuestion(questionNode, theme, index)
     }.toList
   }
 
-  def createQuestion(question: NodeSeq, theme: String): SiQuestion = {
+  def createQuestion(question: NodeSeq, theme: String, index: Int): SiQuestion = {
+    val code = randStr(8)
     val price: Int = (question \@ "price").toInt
     val answer: List[String] = (question \ "right" \ "answer").map(_.text).toList
 
@@ -69,8 +73,8 @@ class SiqParser {
     val scenario = (question \\ "atom").head
     val text = scenario.text
     val scenarioType = SiQuestion.getQuestionScenario(scenario \@ "type")
-    SiQuestion.constructQuestion(price, text, answer, qType, scenarioType, theme, typeNode)
+    SiQuestion.constructQuestion(code, price, text, answer, qType, scenarioType, theme, typeNode)
   }
 
-
+  def randStr(n:Int) = (1 to n).map(_ => alpha(random.nextInt.abs % size)).mkString
 }

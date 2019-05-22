@@ -1,0 +1,8 @@
+@import models.si.SiQuestion
+@(theme: String, list: List[SiQuestion])
+
+<td class="theme">@theme</td>
+
+@for(q <- list) {
+    <td class="question">@roundThemeQuestionNode(q)</td>
+}
