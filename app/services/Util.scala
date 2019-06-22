@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{DirectoryStream, Path}
 import java.util.zip.{ZipEntry, ZipInputStream}
 
-import models.si.{SiRound, SiTheme}
+import models.common.si.{SiRound, SiTheme}
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 

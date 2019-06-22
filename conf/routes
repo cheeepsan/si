@@ -4,15 +4,23 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET     /                                 controllers.HomeController.index
-GET     /server                           controllers.HomeController.server
-GET     /client                           controllers.HomeController.client
-GET     /term                             controllers.HomeController.term
+GET     /                                 @controllers.common.HomeController.index
+GET     /server                           @controllers.common.HomeController.server
+GET     /client                           @controllers.common.HomeController.client
+GET     /term                             @controllers.common.HomeController.term
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                     controllers.Assets.at(path="/public", file)
 
 # Client
-GET /client/process                       controllers.ClientController.process
-GET /client/index                         controllers.ClientController.index
-GET /client/ws                            controllers.ClientController.ws
+#GET /client/process                       @controllers.client.ClientController.process
+GET /client/index                         @controllers.client.ClientController.index(addressString: String)
+GET /client/ws                            @controllers.client.ClientController.ws
+
+# User
+GET  /login                               @controllers.common.UserController.showLoginForm
+POST /processLoginAttempt                 @controllers.common.UserController.processLoginAttempt
+
+# Server
+GET  /server/init                         @controllers.server.ServerController.init
+GET  /server/kill                         @controllers.server.ServerController.killServerActor

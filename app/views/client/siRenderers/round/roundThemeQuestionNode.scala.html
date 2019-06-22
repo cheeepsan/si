@@ -1,0 +1,6 @@
+@import models.common.si.SiQuestion
+@(question: SiQuestion)
+
+<a id="@question.code" href="#" onclick="selectQuestion('username', '@question.code')">
+    @question.price
+</a>

@@ -47,12 +47,10 @@ function drawRound(data) {
     boardDiv.append(data.html)
 }
 
-function chooseQuestion(username, data) {
-    console.log("u " + username)
-    console.log(data)
+function selectQuestion(username, data) {
     let user = new User(0, username)
     let siText = new SiText(data)
-    let message = new Message("chooseQuestion", user, "SiText", siText)
+    let message = new Message("selectQuestion", user, "SiText", siText)
     socket.send(JSON.stringify(message))
 }
 
@@ -66,7 +64,6 @@ function renderData(data) {
 }
 
 function removeQuestion(data) {
-    console.log(data)
     var q = $("#" + data)
     q.remove();
 }

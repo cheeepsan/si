@@ -1,42 +1,51 @@
-package controllers
+package controllers.client
 
 import java.io.File
-import java.net.URI
+import java.net.{InetSocketAddress, URI}
+import java.util.concurrent.TimeUnit.SECONDS
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
+import akka.util.Timeout
 import javax.inject.Inject
-import play.api.libs.json.{JsValue, Json}
-import play.api.libs.streams.ActorFlow
-import services.{SiqParser, Util}
-import models.actors.MyWebSocketActor
-import models.si.{SiMessage, SiUser}
+import models.client.actors.{ClientActor, ListenerActor, MyWebSocketActor}
+import models.common.si.{SiMessage, SiUser}
 import play.api.Logger
+import play.api.libs.json.Json
+import play.api.libs.streams.ActorFlow
 import play.api.mvc._
-import scala.concurrent.{ExecutionContext, Future}
+import services.{ClientServerInit, SiqParser}
 
-class ClientController @Inject()(cc: ControllerComponents)(
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future, duration}
+
+class ClientController @Inject()(cc: ControllerComponents, csi: ClientServerInit)(
   implicit system: ActorSystem,
   mat: Materializer,
   implicit val executionContext: ExecutionContext)
   extends AbstractController(cc) {
 
+  implicit val timeout = new Timeout(duration.FiniteDuration(500, SECONDS))
+
   private val logger = Logger
 
-
-  def index() = Action { implicit request: Request[AnyContent] =>
+  def index(connString: String) = Action { implicit request: Request[AnyContent] =>
     val webSocketUrl = routes.ClientController.ws().webSocketURL()
-    logger.info(s"index: ")
-    Ok(views.html.index(webSocketUrl))
+    val conn = new InetSocketAddress(connString.trim, 9090)
+    logger.info("IN CLIENT INDEX")
+
+    Await.ready(createClientActor(conn), Duration.Inf)
+    Ok(views.html.client.index(webSocketUrl))
   }
 
-  def process() = Action { implicit request: Request[AnyContent] =>
-    val parser = new SiqParser
-    val destDir = new File("F:\\workspace\\si\\siClient\\pack")
-
-    val s = parser.process(destDir)
-    val m = new SiMessage("message", new SiUser(1, "Vasserman"), "hz", s)
-    Ok(Json.toJson(m))
+  def createClientActor(conn: InetSocketAddress) = csi.client.actorSelection("/user/clientActor").resolveOne().recoverWith {
+    case e: Exception =>
+      logger.info("not found ClientActor, new")
+      Future.successful(csi.client.actorOf(ClientActor.props(conn), "clientActor"))
   }
+
+
+  def getListenerActor = csi.client.actorSelection("/user/listener").resolveOne()
 
   /**
     * websockets
@@ -50,16 +59,21 @@ class ClientController @Inject()(cc: ControllerComponents)(
     */
   def ws: WebSocket = WebSocket.acceptOrResult[String, String] {
     case rh if sameOriginCheck(rh) =>
-      val k = ActorFlow.actorRef { out =>
-        MyWebSocketActor.props(out)
+
+      getListenerActor.flatMap {
+        listener =>
+          Future.successful(Right(webSocketActorFromActorFlow(listener)))
       }
-      logger.info("actorFlow " + k)
-      Future.successful(Right(k))
+
     case rejected =>
       logger.error(s"Request ${rejected} failed same origin check")
       Future.successful {
         Left(Forbidden("forbidden"))
       }
+  }
+
+  def webSocketActorFromActorFlow(clientListener: ActorRef) = ActorFlow.actorRef { out =>
+    MyWebSocketActor.props(out, clientListener)
   }
 
   /**

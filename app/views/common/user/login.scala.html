@@ -1,0 +1,59 @@
+@(
+form: Form[models.common.siUser.LoginObject],
+postUrl: Call
+)(implicit request: MessagesRequestHeader)
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel='stylesheet' href='@routes.Assets.at("lib/bootstrap/css/bootstrap.min.css")'>
+    <link rel="stylesheet" media="screen" href='@routes.Assets.at("stylesheets/main.css")'>
+</head>
+
+<body id="user-login">
+<div id="content">
+    @request.flash.data.map{ case (name, value) =>
+    <p>error</p>
+    <div>@name: @value</div>
+    }
+
+    @* Global errors are not tied to any particular form field *@
+    @if(form.hasGlobalErrors) {
+    @form.globalErrors.map { error: FormError =>
+    <div>
+        Error: @error.key: @error.message
+    </div>
+    }
+    }
+    <div id="user-login-form" style="color: black">
+        @helper.form(postUrl, 'id -> "user-login-form") {
+        @helper.CSRF.formField
+
+
+        @helper.inputText(
+        form("username"),
+        '_label -> "Username",
+        'placeholder -> "username",
+        'id -> "username",
+        'size -> 60
+        )
+
+        @helper.inputText(
+        form("address"),
+        '_label -> "Tcp address",
+        'placeholder -> "address",
+        'id -> "address",
+        'size -> 60
+        )
+
+        <button>Login</button>
+
+        }
+
+
+    </div>
+
+</div>
+
+</body>
+</html>

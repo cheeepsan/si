@@ -1,16 +1,8 @@
-package controllers
-
-
-import java.net.InetSocketAddress
+package controllers.common
 
 import javax.inject._
 import play.api.mvc._
-import akka.actor.{ActorRef, ActorSystem}
-import models.{ClientActor, ServerActor}
 import services.ClientServerInit
-
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 /**
  * This controller creates an `Action` to handle HTTP requests to the
  * application's home page.

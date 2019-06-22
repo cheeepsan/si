@@ -9,7 +9,7 @@ scalaVersion := "2.12.8"
 
 libraryDependencies += guice
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
-
+PlayKeys.devSettings += "play.server.http.idleTimeout" -> "infinite"
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.5.19",
