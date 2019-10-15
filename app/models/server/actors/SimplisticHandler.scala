@@ -134,8 +134,6 @@ class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress) extends
     } else connection ! Write(storage(0), Ack)
   }
 
-
-
   def json = {
     val destDir = new File("F:\\workspace\\si\\siClient\\pack")
     val parser = new SiqParser

@@ -1,0 +1,44 @@
+@(webSocketUrl: String)(implicit r: Request[_])
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reactive Stock News Dashboard</title>
+    <link rel='stylesheet' href='@routes.Assets.at("lib/bootstrap/css/bootstrap.min.css")'>
+    <link rel="stylesheet" media="screen" href='@routes.Assets.at("stylesheets/main.css")'>
+    <link rel="shortcut icon" type="image/png" href='@routes.Assets.at("images/favicon.png")'>
+    <script
+            src="https://code.jquery.com/jquery-3.4.0.js"
+            integrity="sha256-DYZMCC8HTC+QDr5QNaIcfR7VSPtcISykd+6eSmBW5qo="
+            crossorigin="anonymous"></script>
+    <script type='text/javascript' charset='utf-8' src='@routes.Assets.at("javascripts/server/server.js")'></script>
+    <script type='text/javascript' charset='utf-8' src='@routes.Assets.at("javascripts/models.js")'></script>
+</head>
+<body data-ws-url='@webSocketUrl' class="text-center">
+<div class="cover-container d-flex h-100 p-3 mx-auto flex-column">
+    <header class="masthead mb-auto">
+        <div class="inner">
+            <h3 id="status" class="masthead-brand">Status</h3>
+            <nav class="nav nav-masthead justify-content-center">
+                <a class="nav-link" href="#" id="clickMe"  onclick="start('@webSocketUrl');">Connect to websocket</a>
+                <a class="nav-link" href="#" id="start"  onclick="start('@webSocketUrl');">Start server</a>
+            </nav>
+        </div>
+    </header>
+
+    <main role="main" class="inner cover">
+        <h1 class="cover-heading">SiGame</h1>
+        <div id="board" class="board">
+
+
+        </div>
+    </main>
+
+    <footer class="mastfoot mt-auto">
+        <div class="inner">
+            <p></p>
+        </div>
+    </footer>
+</div>
+</body>
+
+</html>

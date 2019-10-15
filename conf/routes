@@ -13,7 +13,7 @@ GET     /term                             @controllers.common.HomeController.ter
 GET     /assets/*file                     controllers.Assets.at(path="/public", file)
 
 # Client
-#GET /client/process                       @controllers.client.ClientController.process
+#GET /client/process                      @controllers.client.ClientController.process
 GET /client/index                         @controllers.client.ClientController.index(addressString: String)
 GET /client/ws                            @controllers.client.ClientController.ws
 
@@ -24,3 +24,6 @@ POST /processLoginAttempt                 @controllers.common.UserController.pro
 # Server
 GET  /server/init                         @controllers.server.ServerController.init
 GET  /server/kill                         @controllers.server.ServerController.killServerActor
+GET  /server/ws                           @controllers.server.ServerController.ws
+
+GET  /server/index                        @controllers.server.ServerController.index

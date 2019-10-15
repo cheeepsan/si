@@ -13,8 +13,6 @@ class SenderActor extends Actor {
 
 
   override def receive: Receive = {
-
-    case msg:String =>
-      ""
+    case msg:String => ""
   }
 }
