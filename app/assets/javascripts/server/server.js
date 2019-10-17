@@ -30,6 +30,9 @@ function start(d) {
         case "removeQuestion":
             console.log("removing: " + obj.data)
             removeQuestion(obj.data.text)
+        case "register":
+            console.log("registering: " + obj.data)
+            registerUser(obj.data.text)
             break;
         default:
             console.log("def")
@@ -40,4 +43,10 @@ function start(d) {
     socket.onerror = function(error) {
       console.log("Ошибка " + error.message);
     };
+}
+
+function registerUser(data) {
+    var boardDiv = $("#user")
+    console.log(data)
+    boardDiv.append("user")
 }

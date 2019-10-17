@@ -44,6 +44,9 @@ class MyWebSocketActor(out: ActorRef, clientListener: ActorRef) extends Actor {
     case "start" =>
       logger.info("start message")
       clientListener ! "start"
+    case "register" =>
+      logger.info("MyWebSocketActor::::::registering")
+      clientListener ! textMessage.toJsonAndStringify
     case "selectQuestion" =>
       out ! SiMessage("removeQuestion", new SiUser(1, ""), "SiText", textMessage.data.asInstanceOf[SiText]).toJsonAndStringify
     case _ => out ! "empty"

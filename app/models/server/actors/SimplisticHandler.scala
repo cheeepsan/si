@@ -35,13 +35,21 @@ class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress, serverL
   def writing: Receive = {
     case Received(data) =>
       logger.info("Server handler received, sending back: " + data.utf8String)
-      data.utf8String match {
+      processReceivedData(data)(convertByteString) match {
+        case Right(responseData) =>
+          val dataToWrite = ByteString(responseData)
+          connection ! Write(dataToWrite, Ack(currentOffset))
+          buffer(dataToWrite)
+        case Left(string) =>
+          serverListenerActor ! string
+      }
+      /*data.utf8String match {
         case "start" =>
           val dataToWrite = ByteString(this.json.toJsonAndStringify)
           connection ! Write(dataToWrite, Ack(currentOffset))
           buffer(dataToWrite)
         case _ =>
-      }
+      }*/
     case Ack(ack) =>
       logger.info("Ack received in handler: " + ack)
       if (ack == storageOffset) {
@@ -57,6 +65,43 @@ class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress, serverL
       logger.info("Conn closed in context")
       if (storage.isEmpty) context.stop(self)
       else context.become(closing)
+  }
+
+
+  /**
+    * Right to client
+    * Left to browser and eventually to websocket
+    * @param data
+    * @param byteString
+    * @return
+    */
+  def processReceivedData(data: ByteString)
+                         (byteString: ByteString => Either[String, SiMessage]): Either[String, String]
+  = byteString(data) match {
+    case Right(value: SiMessage) =>
+      logger.info("siMessage obj recieved")
+      value.message match {
+        case "register" =>
+          logger.info("HANDLER:::::register")
+          Left(value.toJsonAndStringify)
+        case _ => Left("")
+      }
+    case Left(string: String) =>
+      string match {
+        case "start" => Right(this.json.toJsonAndStringify)
+        case _ => Left("")
+      }
+  }
+
+  def convertByteString(data: ByteString) = {
+    val string = data.utf8String
+    logger.info("Converting bytestring to json or string")
+    Json.parse(string).validate[SiMessage].asOpt match {
+      case Some(siMessage) =>
+        Right(siMessage)
+      case None =>
+        Left(string)
+    }
   }
 
   def buffering(nack: Int): Receive = {

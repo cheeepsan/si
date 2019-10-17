@@ -54,7 +54,7 @@ function selectQuestion(username, data) {
     socket.send(JSON.stringify(message))
 }
 
-function renderData(data) {
+function renderData() {
     let user = new User(0, "username")
     let siText = new SiText("")
     let message = new Message("start", user, "SiText", siText)
@@ -66,4 +66,11 @@ function renderData(data) {
 function removeQuestion(data) {
     var q = $("#" + data)
     q.remove();
+}
+
+function register(username) {
+    let user = new User(0, username)
+    let siText = new SiText("")
+    let message = new Message("register", user, "SiText", siText)
+    socket.send(JSON.stringify(message));
 }
