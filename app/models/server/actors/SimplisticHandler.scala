@@ -84,11 +84,11 @@ class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress, serverL
         case "register" =>
           logger.info("HANDLER:::::register")
           Left(value.toJsonAndStringify)
+        case "start" => Right(this.json.toJsonAndStringify)
         case _ => Left("")
       }
     case Left(string: String) =>
       string match {
-        case "start" => Right(this.json.toJsonAndStringify)
         case _ => Left("")
       }
   }
@@ -220,7 +220,7 @@ class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress, serverL
     val s = parser.process(destDir)
     val round = s.rounds.head
     val className = round.getClass.getTypeName.split("\\.").last
-    logger.info("Sending round")
+    logger.info("Sending round: "+ className)
     new SiMessage("round", new SiUser(1, ""), className, round)
   }
 }

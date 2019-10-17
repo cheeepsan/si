@@ -31,16 +31,6 @@ class ListenerActor(clientActor: ActorRef) extends Actor {
     case _ =>
       logger.info(":::::::::::::::::::::nothing")
   }
-/*
-      msg match {
-
-        case "start" =>
-          clientActor ! msg
-        case _ =>
-          webSocketActor.foreach(_ ! msg)
-      }
- */
-
 
   def receiveTextMessage(msg: String) = msg match {
     case "registered" => logger.info("Registered in listener")
@@ -50,13 +40,15 @@ class ListenerActor(clientActor: ActorRef) extends Actor {
   def receiveJsonMessage(message: SiMessage): Unit = message.dataObjectType match {
     case "SiText" =>
       receiveSiText(message)
+    case "SiRound" =>
+      webSocketActor.foreach(_ ! message.toJsonAndStringify)
     case _ => logger.info("nothing")
   }
 
 
   def receiveSiText(textMessage: SiMessage): Unit = textMessage.message match {
     case "start" =>
-      clientActor ! "start"
+      clientActor ! textMessage.toJsonAndStringify
     case "register" =>
       logger.info("MyWebSocketActor::::::registering")
       clientActor ! textMessage.toJsonAndStringify

@@ -43,7 +43,7 @@ class MyWebSocketActor(out: ActorRef, clientListener: ActorRef) extends Actor {
   def receiveSiText(textMessage: SiMessage): Unit = textMessage.message match {
     case "start" =>
       logger.info("start message")
-      clientListener ! "start"
+      clientListener ! textMessage.toJsonAndStringify
     case "register" =>
       logger.info("MyWebSocketActor::::::registering")
       clientListener ! textMessage.toJsonAndStringify
