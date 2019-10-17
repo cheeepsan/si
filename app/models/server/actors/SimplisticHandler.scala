@@ -43,8 +43,8 @@ class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress, serverL
         case _ =>
       }
     case Ack(ack) =>
-      logger.info("Ack received in handler")
-      if (ack == 0) {
+      logger.info("Ack received in handler: " + ack)
+      if (ack == storageOffset) {
         connection ! Write(ByteString("FIN"), NoAck)
       } else {
         acknowledge(ack)
@@ -166,11 +166,6 @@ class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress, serverL
       logger.debug("resuming reading")
       connection ! ResumeReading
       suspended = false
-    }
-
-    if (storage.isEmpty) {
-      logger.debug("Sending last ack, storage offset: " + storageOffset)
-      connection ! Write(ByteString.empty, Ack(0))
     }
   }
 
