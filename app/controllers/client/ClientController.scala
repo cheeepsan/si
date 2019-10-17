@@ -1,6 +1,5 @@
 package controllers.client
 
-import java.io.File
 import java.net.{InetSocketAddress, URI}
 import java.util.concurrent.TimeUnit.SECONDS
 
@@ -8,13 +7,11 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.util.Timeout
 import javax.inject.Inject
-import models.client.actors.{ClientActor, ListenerActor, MyWebSocketActor}
-import models.common.si.{SiMessage, SiUser}
+import models.client.actors.{ClientActor, MyWebSocketActor}
 import play.api.Logger
-import play.api.libs.json.Json
 import play.api.libs.streams.ActorFlow
 import play.api.mvc._
-import services.{ClientServerInit, SiqParser}
+import services.ClientServerInit
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future, duration}

@@ -71,12 +71,10 @@ class ServerController @Inject()(cc: ControllerComponents, csi: ClientServerInit
     */
   def ws: WebSocket = WebSocket.acceptOrResult[String, String] {
     case rh if sameOriginCheck(rh) =>
-
-      //      getListenerActor.flatMap {
-      //        listener =>
-      //          Future.successful(Right(webSocketActorFromActorFlow(listener)))
-      //      }
-      Future(Right(webSocketActorFromActorFlow))
+      this.resolveActor("serverActor").flatMap {
+        serverActor =>
+          Future(Right(webSocketActorFromActorFlow(serverActor)))
+      }
     case rejected =>
       logger.error(s"Request ${rejected} failed same origin check")
       Future.successful {
@@ -84,8 +82,8 @@ class ServerController @Inject()(cc: ControllerComponents, csi: ClientServerInit
       }
   }
 
-  def webSocketActorFromActorFlow = ActorFlow.actorRef { out =>
-    ServerWebSocketActor.props(out)
+  def webSocketActorFromActorFlow(serverActor: ActorRef) = ActorFlow.actorRef { out =>
+    ServerWebSocketActor.props(out, serverActor)
   }
 
   /**

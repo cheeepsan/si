@@ -6,97 +6,134 @@ import java.net.InetSocketAddress
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 import akka.io.Tcp.Event
-import akka.remote.Ack
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Flow, Framing, Sink, Source}
 import akka.util.ByteString
-import models.common.si.{SiHtml, SiMessage, SiObject, SiUser}
+import models.common.si.{SiMessage, SiUser}
 import play.api.libs.json.Json
 import services.SiqParser
 
-
+//https://github.com/akka/akka/blob/v2.5.25/akka-docs/src/test/scala/docs/io/EchoServer.scala
 object SimplisticHandler {
-  def props(connection: ActorRef, remote: InetSocketAddress): Props = {
-    Props.create(classOf[SimplisticHandler], connection, remote)
+
+  final case class Ack(offset: Int) extends Event
+
+  def props(connection: ActorRef, remote: InetSocketAddress, serverListenerActor: ActorRef): Props = {
+    Props.create(classOf[SimplisticHandler], connection, remote, serverListenerActor)
   }
 }
 
-class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress) extends Actor {
-  implicit val materializer = ActorMaterializer()
-  val logger = Logging.getLogger(context.system, this)
-
-  case object Ack extends Event
+class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress, serverListenerActor: ActorRef) extends Actor {
+  import SimplisticHandler.Ack
   import akka.io.Tcp._
 
-  def receive = {
+  implicit val materializer = ActorMaterializer()
+  val logger = Logging.getLogger(context.system, this)
+  serverListenerActor ! self
+
+  def receive = writing
+
+  def writing: Receive = {
     case Received(data) =>
-      processReceivedData(data)(convertByteString) match {
-        case Right(json) =>
-          streamChunkedData(json)
-        case Left(string) =>
-          sender() ! Write(ByteString(string))
+      logger.info("Server handler received, sending back: " + data.utf8String)
+      data.utf8String match {
+        case "start" =>
+          val dataToWrite = ByteString(this.json.toJsonAndStringify)
+          connection ! Write(dataToWrite, Ack(currentOffset))
+          buffer(dataToWrite)
+        case _ =>
       }
-    case PeerClosed => context stop self
+    case Ack(ack) =>
+      logger.info("Ack received in handler")
+      if (ack == 0) {
+        connection ! Write(ByteString("FIN"), NoAck)
+      } else {
+        acknowledge(ack)
+      }
+    case CommandFailed(Write(_, Ack(ack))) =>
+      logger.info("Command failed in server handler")
+      connection ! ResumeWriting
+      context.become(buffering(ack))
+    case PeerClosed =>
+      logger.info("Conn closed in context")
+      if (storage.isEmpty) context.stop(self)
+      else context.become(closing)
   }
 
-  def processReceivedData(data: ByteString)
-                         (byteString: ByteString => Either[String, SiMessage])
-  = byteString(data) match {
-    case Right(value: SiMessage) =>
-      logger.info("siMessage obj recieved")
-      Left("")
-    case Left(string: String) =>
-      string match {
-        case "start" => Right(this.json)
-        case _ => Left("")
-      }
-  }
+  def buffering(nack: Int): Receive = {
+    var toAck = 10
+    var peerClosed = false
 
-  def convertByteString(data: ByteString) = {
-    val string = data.utf8String
-    Json.toJson(string).validate[SiMessage].asOpt match {
-      case Some(siMessage) =>
-        Right(siMessage)
-      case None =>
-        Left(string)
+    {
+      case Received(data)         => buffer(data)
+      case WritingResumed         => writeFirst()
+      case PeerClosed             => peerClosed = true
+      case Ack(ack) if ack < nack => acknowledge(ack)
+      case Ack(ack) =>
+        acknowledge(ack)
+        if (storage.nonEmpty) {
+          if (toAck > 0) {
+            // stay in ACK-based mode for a while
+            writeFirst()
+            toAck -= 1
+          } else {
+            // then return to NACK-based again
+            writeAll()
+            context.become(if (peerClosed) closing else writing)
+          }
+        } else if (peerClosed) context.stop(self)
+        else context.become(writing)
     }
   }
 
-  def streamChunkedData(json: SiMessage) = {
-    val byteString = ByteString(json.toJsonAndStringify)
-//    val framing = Framing.simpleFramingProtocolEncoder(4)
-//    val flow = Flow[ByteString].via(framing)
-//    val source = Source.single(byteString).via(flow)
-//    source.runWith(Sink.foreach { msg =>
-//
-//      sender() ! Write(msg)
-//
-//    })
-    contextStuff(byteString)
-  }
+  /**
+    * closing
+    * @return
+    */
+  def closing: Receive = {
+    case CommandFailed(_: Write) =>
+      connection ! ResumeWriting
+      context.become({
 
-  def contextStuff(chunk: ByteString) = {
-    buffer(chunk)
-    sender() ! Write(chunk, Ack)
+        case WritingResumed =>
+          writeAll()
+          context.unbecome()
 
-    context.become({
-      case Received(data) => buffer(data)
-      case Ack            => acknowledge()
-      case PeerClosed     => closing = true
-    }, discardOld = false)
+        case ack: Int => acknowledge(ack)
+
+      }, discardOld = false)
+
+    case Ack(ack) =>
+      acknowledge(ack)
+      if (storage.isEmpty) context.stop(self)
   }
 
   //https://doc.akka.io/docs/akka/current/io-tcp.html ACK
-  var storage = Vector.empty[ByteString]
-  var stored = 0L
-  var transferred = 0L
-  var closing = false
+  private var storageOffset = 0
+  private var storage = Vector.empty[ByteString]
+  private var stored = 0L
+  private var transferred = 0L
 
-  val maxStored = 100000000L
-  val highWatermark = maxStored * 5 / 10
-  val lowWatermark = maxStored * 3 / 10
-  var suspended = false
+  private val maxStored = 100000000L
+  private val highWatermark = maxStored * 5 / 10
+  private val lowWatermark = maxStored * 3 / 10
+  private var suspended = false
 
+  private def currentOffset = storageOffset + storage.size
+
+  private def writeFirst(): Unit = {
+    connection ! Write(storage(0), Ack(storageOffset))
+  }
+
+  private def writeAll(): Unit = {
+    for ((data, i) <- storage.zipWithIndex) {
+      connection ! Write(data, Ack(storageOffset + i))
+    }
+  }
+
+  /**
+    * Helpers
+    * @param data
+    */
   private def buffer(data: ByteString): Unit = {
     storage :+= data
     stored += data.size
@@ -112,13 +149,17 @@ class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress) extends
     }
   }
 
-  private def acknowledge(): Unit = {
+  private def acknowledge(ack: Int): Unit = {
+    require(ack == storageOffset, s"received ack $ack at $storageOffset")
     require(storage.nonEmpty, "storage was empty")
 
     val size = storage(0).size
     stored -= size
     transferred += size
 
+    storage = storage.drop(1)
+
+    storageOffset += 1
     storage = storage.drop(1)
 
     if (suspended && stored < lowWatermark) {
@@ -128,14 +169,13 @@ class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress) extends
     }
 
     if (storage.isEmpty) {
-      connection ! Write(ByteString("FIN"), Ack)
-      if (closing) context.stop(self)
-      else context.unbecome()
-    } else connection ! Write(storage(0), Ack)
+      logger.debug("Sending last ack, storage offset: " + storageOffset)
+      connection ! Write(ByteString.empty, Ack(0))
+    }
   }
 
   def json = {
-    val destDir = new File("F:\\workspace\\si\\siClient\\pack")
+    val destDir = new File("/home/chipson/workspace/siGameFree/Vse_podryad_1")
     val parser = new SiqParser
     val s = parser.process(destDir)
     val round = s.rounds.head
@@ -144,3 +184,51 @@ class SimplisticHandler(connection: ActorRef, remote: InetSocketAddress) extends
     new SiMessage("round", new SiUser(1, ""), className, round)
   }
 }
+/*
+
+processReceivedData(data)(convertByteString) match {
+   case Right(json) =>
+     streamChunkedData(json)
+   case Left(string) =>
+     connection ! Write(ByteString(string))
+}
+
+def processReceivedData(data: ByteString)
+                       (byteString: ByteString => Either[String, SiMessage])
+= byteString(data) match {
+  case Right(value: SiMessage) =>
+    logger.info("siMessage obj recieved")
+    Left("")
+  case Left(string: String) =>
+    string match {
+      case "start" => Right(this.json)
+      case _ => Left("")
+    }
+}
+
+def convertByteString(data: ByteString) = {
+  val string = data.utf8String
+  Json.toJson(string).validate[SiMessage].asOpt match {
+    case Some(siMessage) =>
+      Right(siMessage)
+    case None =>
+      Left(string)
+  }
+}
+
+def streamChunkedData(json: SiMessage) = {
+  val byteString = ByteString(json.toJsonAndStringify)
+  contextStuff(byteString)
+}
+
+def contextStuff(chunk: ByteString) = {
+  buffer(chunk)
+  sender() ! Write(chunk, Ack)
+
+  context.become({
+    case Received(data) => buffer(data)
+    case Ack            => acknowledge()
+    case PeerClosed     => closing = true
+  }, discardOld = false)
+}
+*/

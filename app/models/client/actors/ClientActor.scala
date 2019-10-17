@@ -58,6 +58,10 @@ class ClientActor(remote: InetSocketAddress) extends Actor {
       } else {
         storage :+= data
       }
+    case Ack(ack, ack2) =>
+      log.info("ACK in listener: " + ack + ", ack2: " + ack2)
+    case NoAck =>
+      log.info("NoAck received")
     case "close" =>
       connection ! Close
     case _: ConnectionClosed =>

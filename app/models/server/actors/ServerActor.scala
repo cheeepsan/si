@@ -1,16 +1,11 @@
 package models.server.actors
 
-import java.io.File
 import java.net.InetSocketAddress
 
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 import akka.io.Tcp._
-import akka.io.{IO, Tcp, TcpMessage}
-import models.common.si.{SiHtml, SiMessage, SiUser}
-import play.api.libs.json.Json
-import play.twirl.api.HtmlFormat
-import services.SiqParser
+import akka.io.{IO, Tcp}
 
 object ServerActor {
   def props(conn: InetSocketAddress): Props = {
@@ -21,8 +16,9 @@ object ServerActor {
 class ServerActor(conn: InetSocketAddress) extends Actor {
   import context.system // implicitly used by IO(
   val logger = Logging(context.system, self)
-
   val tcpActor = IO(Tcp)
+
+  var webSocketActor: Option[ActorRef] = None
 
   override def preStart(): Unit = {
 
@@ -31,6 +27,10 @@ class ServerActor(conn: InetSocketAddress) extends Actor {
 
 
   def receive = {
+    case actor: ActorRef =>
+      webSocketActor = Some(actor) //has to be webSocket
+      webSocketActor.foreach(_ ! true)
+      logger.info("Got message in server actor from actor "+ actor)
     case b @ Bound(localAddress) ⇒
       context.parent ! b
       logger.info("Server actor bound, addr: " + localAddress)
@@ -40,9 +40,13 @@ class ServerActor(conn: InetSocketAddress) extends Actor {
 
     case c @ Connected(remote, local) ⇒
       val connection = sender()
-      val handler = context.actorOf(SimplisticHandler.props(connection, remote))
-
-      connection ! Register(handler)
+      webSocketActor match {
+        case Some(wsActor) =>
+          val listener = context.actorOf(ServerListenerActor.props(wsActor))
+          val handler = context.actorOf(SimplisticHandler.props(connection, remote, listener))
+          connection ! Register(handler)
+        case None =>
+      }
   }
 
 

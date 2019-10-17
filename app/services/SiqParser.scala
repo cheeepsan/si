@@ -14,7 +14,7 @@ class SiqParser {
   val contentXMLName = "content.xml"
 
   def process(dir: File): SiPackage = {
-    val contentXML = XML.loadFile(dir.getAbsolutePath + "\\" + contentXMLName)
+    val contentXML = XML.loadFile(dir.getAbsolutePath + "/" + contentXMLName)
 
     val xmlPackage = contentXML \\ "package"
     val rounds: List[SiRound] = this.createRounds(xmlPackage)
